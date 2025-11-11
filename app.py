@@ -169,7 +169,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header
-st.markdown('<h1 class="main-header">👨‍🍳 Chef\'s Recipe Hub</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">👨‍🍳 Group8 Recipe Hub</h1>', unsafe_allow_html=True)
 st.markdown("**Professionelle Rezepte für Ihre Küche**")
 
 # Load recipes
@@ -414,4 +414,5 @@ else:
 
 st.markdown("---")
 st.markdown("© 2025 Chef's Recipe Hub — Professionelle Rezeptverwaltung für Feinschmecker")
+
 
