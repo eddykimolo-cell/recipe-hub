@@ -7,6 +7,54 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.colors import HexColor
 
 DATA_FILE = "recipes.json"
+USERS_FILE = "users.json"
+
+# -------------------------------
+# Authentication functions
+# -------------------------------
+def load_users():
+    try:
+        if os.path.exists(USERS_FILE):
+            with open(USERS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        st.error(f"Error loading users: {e}")
+        return []
+
+def save_users(users):
+    try:
+        with open(USERS_FILE, "w", encoding="utf-8") as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        st.error(f"Error saving users: {e}")
+        return False
+
+def authenticate_user(username, password):
+    users = load_users()
+    for user in users:
+        if user["username"] == username and user["password"] == password:
+            return user
+    return None
+
+def register_user(username, password, email=""):
+    users = load_users()
+    # Check if username already exists
+    for user in users:
+        if user["username"] == username:
+            return False, "Username already exists"
+    
+    new_user = {
+        "username": username,
+        "password": password,
+        "email": email,
+        "joined_date": datetime.now().strftime("%Y-%m-%d")
+    }
+    users.append(new_user)
+    if save_users(users):
+        return True, "Registration successful"
+    return False, "Registration failed"
 
 # -------------------------------
 # Utility functions
@@ -165,9 +213,99 @@ st.markdown("""
         font-size: 0.8rem;
         display: inline-block;
     }
+    .auth-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
+# Initialize session state
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
+if "show_login" not in st.session_state:
+    st.session_state.show_login = True
+
+# -------------------------------
+# Authentication UI
+# -------------------------------
+if not st.session_state.authenticated:
+    # Header (always visible)
+    st.markdown('<h1 class="main-header">👨‍🍳 Group8 Recipe Hub</h1>', unsafe_allow_html=True)
+    st.markdown("**Professionelle Rezepte für Ihre Küche**")
+    
+    # Authentication Tabs
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
+    
+    with tab1:
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        st.subheader("Login to Your Account")
+        
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            login_btn = st.form_submit_button("Login")
+            
+            if login_btn:
+                if username and password:
+                    user = authenticate_user(username, password)
+                    if user:
+                        st.session_state.authenticated = True
+                        st.session_state.current_user = user
+                        st.session_state.show_login = False
+                        st.success(f"Welcome back, {user['username']}!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password")
+                else:
+                    st.error("Please fill in all fields")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with tab2:
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        st.subheader("Create New Account")
+        
+        with st.form("register_form"):
+            new_username = st.text_input("Username", placeholder="Choose a username")
+            new_password = st.text_input("Password", type="password", placeholder="Choose a password")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm your password")
+            email = st.text_input("Email (optional)", placeholder="Your email address")
+            register_btn = st.form_submit_button("Register")
+            
+            if register_btn:
+                if new_username and new_password and confirm_password:
+                    if new_password == confirm_password:
+                        success, message = register_user(new_username, new_password, email)
+                        if success:
+                            st.success(message)
+                            # Auto-login after registration
+                            st.session_state.authenticated = True
+                            st.session_state.current_user = {
+                                "username": new_username,
+                                "email": email,
+                                "joined_date": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            st.session_state.show_login = False
+                            st.rerun()
+                        else:
+                            st.error(message)
+                    else:
+                        st.error("Passwords do not match")
+                else:
+                    st.error("Please fill in all required fields")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.stop()
+
+# -------------------------------
+# MAIN APPLICATION (only shown when authenticated)
+# -------------------------------
 # Header
 st.markdown('<h1 class="main-header">👨‍🍳 Group8 Recipe Hub</h1>', unsafe_allow_html=True)
 st.markdown("**Professionelle Rezepte für Ihre Küche**")
@@ -179,6 +317,15 @@ recipes = load_recipes()
 # Sidebar
 # -------------------------------
 with st.sidebar:
+    # User info and logout
+    st.success(f"👋 Welcome, **{st.session_state.current_user['username']}**!")
+    if st.button("🚪 Logout", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.current_user = None
+        st.session_state.show_login = True
+        st.rerun()
+    
+    st.markdown("---")
     st.markdown("### 🔍 Rezept-Filter")
     
     search = st.text_input("Rezepte durchsuchen", placeholder="Name, Zutaten oder Kategorie...")
@@ -274,7 +421,9 @@ with st.sidebar:
                         "category": category,
                         "calories": calories.strip(),
                         "favorite": False,
-                        "image": selected_emoji
+                        "image": selected_emoji,
+                        "created_by": st.session_state.current_user["username"],
+                        "created_date": datetime.now().strftime("%Y-%m-%d %H:%M")
                     }
                     recipes.insert(0, new_recipe)
                     if save_recipes(recipes):
@@ -373,6 +522,10 @@ else:
                     save_recipes(recipes)
                     st.rerun()
             
+            # Show creator info if available
+            if recipe.get("created_by"):
+                st.caption(f"Erstellt von {recipe['created_by']} am {recipe.get('created_date', '')}")
+            
             tab1, tab2 = st.tabs(["🧂 Zutatenliste", "👨‍🍳 Zubereitungsschritte"])
             
             with tab1:
@@ -414,5 +567,3 @@ else:
 
 st.markdown("---")
 st.markdown("© 2025 Chef's Recipe Hub — Professionelle Rezeptverwaltung für Feinschmecker")
-
-
