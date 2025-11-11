@@ -119,7 +119,7 @@ def export_recipe_pdf(recipe):
 # App setup
 # -------------------------------
 st.set_page_config(
-    page_title="Chef's Recipe Hub", 
+    page_title="G8 Recipe Hub", 
     page_icon="👨‍🍳", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -414,3 +414,4 @@ else:
 
 st.markdown("---")
 st.markdown("© 2025 Chef's Recipe Hub — Professionelle Rezeptverwaltung für Feinschmecker")
+
