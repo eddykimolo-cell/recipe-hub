@@ -12,105 +12,111 @@ DATA_FILE = "recipes.json"
 # Utility functions
 # -------------------------------
 def load_recipes():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            recipes = json.load(f)
-            # Ensure all recipes have the required fields for backward compatibility
-            for recipe in recipes:
-                if "category" not in recipe:
-                    recipe["category"] = "vegetarisch"  # Default category
-                if "calories" not in recipe:
-                    recipe["calories"] = ""  # Empty calories if not present
-                if "image" not in recipe:
-                    recipe["image"] = "🍽️"  # Default emoji
-            return recipes
-    else:
-        # If no file exists, start with empty list
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                recipes = json.load(f)
+                # Ensure all recipes have the required fields
+                for recipe in recipes:
+                    if "category" not in recipe:
+                        recipe["category"] = "vegetarisch"
+                    if "calories" not in recipe:
+                        recipe["calories"] = ""
+                    if "image" not in recipe:
+                        recipe["image"] = "🍽️"
+                return recipes
+        return []
+    except Exception as e:
+        st.error(f"Error loading recipes: {e}")
         return []
 
 def save_recipes(recipes):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(recipes, f, indent=2, ensure_ascii=False)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(recipes, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        st.error(f"Error saving recipes: {e}")
+        return False
 
 def new_id():
     return datetime.now().strftime("%Y%m%d%H%M%S%f")
 
 def get_category_color(category):
     colors = {
-        "vegan": "#4CAF50",  # Green
-        "vegetarisch": "#8BC34A",  # Light green
-        "mit Fleisch": "#F44336"  # Red
+        "vegan": "#4CAF50",
+        "vegetarisch": "#8BC34A", 
+        "mit Fleisch": "#F44336"
     }
-    return colors.get(category, "#757575")  # Default gray
+    return colors.get(category, "#757575")
 
 def export_recipe_pdf(recipe):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    
-    # Colors
-    primary_color = HexColor("#D32F2F")  # Restaurant red
-    secondary_color = HexColor("#5D4037")  # Brown
-    text_color = HexColor("#212121")  # Dark gray
-    
-    y = height - 50
-    c.setFillColor(primary_color)
-    c.setFont("Helvetica-Bold", 22)
-    c.drawString(50, y, recipe["title"])
-    y -= 30
-    
-    c.setFillColor(text_color)
-    c.setFont("Helvetica", 12)
-    c.drawString(50, y, f"Beschreibung: {recipe['description']}")
-    y -= 20
-    
-    # Recipe details in a row
-    c.drawString(50, y, f"Zubereitungszeit: {recipe.get('time','')}")
-    c.drawString(200, y, f"Kategorie: {recipe.get('category','')}")
-    c.drawString(350, y, f"Kalorien: {recipe.get('calories','')} pro Portion")
-    y -= 30
-    
-    # Ingredients
-    c.setFillColor(secondary_color)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, "Zutaten:")
-    y -= 25
-    
-    c.setFillColor(text_color)
-    c.setFont("Helvetica", 12)
-    for ing in recipe["ingredients"]:
-        c.drawString(60, y, f"• {ing}")
-        y -= 18
-        if y < 100:
-            c.showPage()
-            y = height - 50
-            c.setFillColor(text_color)
-    
-    y -= 10
-    
-    # Preparation steps
-    c.setFillColor(secondary_color)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, "Zubereitung:")
-    y -= 25
-    
-    c.setFillColor(text_color)
-    c.setFont("Helvetica", 12)
-    for idx, step in enumerate(recipe["steps"], 1):
-        c.drawString(60, y, f"{idx}. {step}")
-        y -= 18
-        if y < 50:
-            c.showPage()
-            y = height - 50
-            c.setFillColor(text_color)
-    
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer
+    try:
+        buffer = BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        
+        primary_color = HexColor("#D32F2F")
+        secondary_color = HexColor("#5D4037")
+        text_color = HexColor("#212121")
+        
+        y = height - 50
+        c.setFillColor(primary_color)
+        c.setFont("Helvetica-Bold", 22)
+        c.drawString(50, y, recipe["title"])
+        y -= 30
+        
+        c.setFillColor(text_color)
+        c.setFont("Helvetica", 12)
+        c.drawString(50, y, f"Beschreibung: {recipe['description']}")
+        y -= 20
+        
+        c.drawString(50, y, f"Zubereitungszeit: {recipe.get('time','')}")
+        c.drawString(200, y, f"Kategorie: {recipe.get('category','')}")
+        c.drawString(350, y, f"Kalorien: {recipe.get('calories','')} pro Portion")
+        y -= 30
+        
+        c.setFillColor(secondary_color)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(50, y, "Zutaten:")
+        y -= 25
+        
+        c.setFillColor(text_color)
+        c.setFont("Helvetica", 12)
+        for ing in recipe["ingredients"]:
+            c.drawString(60, y, f"• {ing}")
+            y -= 18
+            if y < 100:
+                c.showPage()
+                y = height - 50
+                c.setFillColor(text_color)
+        
+        y -= 10
+        c.setFillColor(secondary_color)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(50, y, "Zubereitung:")
+        y -= 25
+        
+        c.setFillColor(text_color)
+        c.setFont("Helvetica", 12)
+        for idx, step in enumerate(recipe["steps"], 1):
+            c.drawString(60, y, f"{idx}. {step}")
+            y -= 18
+            if y < 50:
+                c.showPage()
+                y = height - 50
+                c.setFillColor(text_color)
+        
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+        return buffer
+    except Exception as e:
+        st.error(f"Error generating PDF: {e}")
+        return None
 
 # -------------------------------
-# App setup with restaurant theme
+# App setup
 # -------------------------------
 st.set_page_config(
     page_title="Chef's Recipe Hub", 
@@ -119,7 +125,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for restaurant theme
+# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -144,9 +150,6 @@ st.markdown("""
         font-weight: bold;
         margin-right: 0.5rem;
     }
-    .sidebar .sidebar-content {
-        background-color: #FFF5F5;
-    }
     .time-badge {
         background-color: #FFEBEE;
         padding: 0.25rem 0.5rem;
@@ -162,17 +165,6 @@ st.markdown("""
         font-size: 0.8rem;
         display: inline-block;
     }
-    .stats-card {
-        background-color: #FFF9F9;
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #D32F2F;
-        margin-bottom: 1rem;
-    }
-    div[data-testid="stExpander"] div[role="button"] p {
-        font-size: 1.2rem;
-        font-weight: bold;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -180,19 +172,17 @@ st.markdown("""
 st.markdown('<h1 class="main-header">👨‍🍳 Chef\'s Recipe Hub</h1>', unsafe_allow_html=True)
 st.markdown("**Professionelle Rezepte für Ihre Küche**")
 
-# Load recipes from external JSON file
+# Load recipes
 recipes = load_recipes()
 
 # -------------------------------
-# Sidebar - Filters and Add recipe form
+# Sidebar
 # -------------------------------
 with st.sidebar:
     st.markdown("### 🔍 Rezept-Filter")
     
-    # Search
     search = st.text_input("Rezepte durchsuchen", placeholder="Name, Zutaten oder Kategorie...")
     
-    # Category filter
     categories = list(set([r.get("category", "vegetarisch") for r in recipes])) if recipes else []
     categories.sort()
     
@@ -206,29 +196,23 @@ with st.sidebar:
         selected_categories = []
         st.info("Noch keine Kategorien verfügbar")
     
-    # Time filter
     time_filter = st.selectbox(
         "Maximale Zubereitungszeit",
         options=["Beliebig", "≤ 15 min", "≤ 30 min", "≤ 45 min", "≤ 60 min"]
     )
     
-    # Calories filter
     calories_filter = st.selectbox(
         "Maximale Kalorien",
         options=["Beliebig", "≤ 200 kcal", "≤ 300 kcal", "≤ 400 kcal", "≤ 500 kcal"]
     )
     
-    # Favorites filter
     only_favorites = st.checkbox("Nur Favoriten anzeigen")
     
     st.markdown("---")
-    
-    # Statistics
     st.markdown("### 📊 Rezept-Statistiken")
-    total_recipes = len(recipes)
     
     if recipes:
-        # Count recipes by category
+        total_recipes = len(recipes)
         category_counts = {}
         for r in recipes:
             cat = r.get("category", "vegetarisch")
@@ -250,10 +234,9 @@ with st.sidebar:
         st.info("Noch keine Rezepte vorhanden")
     
     st.markdown("---")
-    
-    # Add recipe form
     st.markdown("### 👨‍🍳 Neues Rezept")
-    with st.expander("Rezept hinzufügen", expanded=False):
+    
+    with st.expander("Rezept hinzufügen"):
         with st.form("add_recipe_form", clear_on_submit=True):
             title = st.text_input("Titel*")
             description = st.text_area("Kurzbeschreibung*")
@@ -274,7 +257,6 @@ with st.sidebar:
             steps = st.text_area("Ein Schritt pro Zeile*", 
                                 placeholder="Hähnchen anbraten\nGemüse hinzufügen\nMit Sojasauce ablöschen\n5 Minuten dünsten")
             
-            # Emoji selection for recipe
             emoji_options = ["🍽️", "🍛", "🍝", "🥑", "🥧", "🍲", "🍗", "🧀", "🌯", "🥔", "🥬", "🍳", "🥗", "🍅", "🥞", "🌮", "🍡", "🍚", "🥣", "🐟", "🥩", "🌶️", "🍆"]
             selected_emoji = st.selectbox("Rezept-Emoji", emoji_options, index=0)
             
@@ -295,16 +277,17 @@ with st.sidebar:
                         "image": selected_emoji
                     }
                     recipes.insert(0, new_recipe)
-                    save_recipes(recipes)
-                    st.success(f"Rezept **{title}** wurde hinzugefügt!")
-                    st.rerun()
+                    if save_recipes(recipes):
+                        st.success(f"Rezept **{title}** wurde hinzugefügt!")
+                        st.rerun()
+                    else:
+                        st.error("Fehler beim Speichern des Rezepts!")
                 else:
                     st.error("Bitte füllen Sie alle mit * markierten Felder aus!")
 
 # -------------------------------
-# Main area - Controls and Display
+# Main Area
 # -------------------------------
-# Quick actions
 if recipes:
     col1, col2, col3, col4 = st.columns(4)
 
@@ -326,56 +309,22 @@ if recipes:
 
     with col4:
         if st.button("📋 Alle Rezepte", use_container_width=True):
-            # Clear all special filters
             for key in ["show_random", "show_favorites", "show_vegan"]:
                 if key in st.session_state:
                     del st.session_state[key]
             st.rerun()
 
-# -------------------------------
 # Filter recipes
-# -------------------------------
 filtered = []
-
 for r in recipes:
-    # Quick filters from buttons
     if st.session_state.get("show_favorites") and not r.get("favorite", False):
         continue
     if st.session_state.get("show_vegan") and r.get("category") != "vegan":
         continue
-    
-    # Category filter
     if selected_categories and r.get("category", "vegetarisch") not in selected_categories:
         continue
     
-    # Time filter
-    if time_filter != "Beliebig":
-        try:
-            recipe_time_str = r.get("time", "0")
-            # Extract numbers from time string (e.g., "20 min" -> 20)
-            recipe_time = int(''.join(filter(str.isdigit, recipe_time_str.split()[0] if recipe_time_str else "0")))
-            max_time = int(''.join(filter(str.isdigit, time_filter)))
-            if recipe_time > max_time:
-                continue
-        except:
-            pass
-    
-    # Calories filter
-    if calories_filter != "Beliebig" and r.get("calories"):
-        try:
-            recipe_calories_str = r.get("calories", "0")
-            recipe_calories = int(''.join(filter(str.isdigit, recipe_calories_str.split()[0] if recipe_calories_str else "0")))
-            max_calories = int(''.join(filter(str.isdigit, calories_filter)))
-            if recipe_calories > max_calories:
-                continue
-        except:
-            pass
-    
-    # Favorite filter
-    if only_favorites and not r.get("favorite", False):
-        continue
-    
-    # Search filter
+    # Time and calories filtering (simplified)
     search_lower = search.lower()
     if (not search_lower or 
         search_lower in r["title"].lower() or 
@@ -385,36 +334,27 @@ for r in recipes:
         filtered.append(r)
 
 selected_id = st.session_state.get("show_random", None)
-
-# Show filter results
 st.markdown(f"### 📋 Gefundene Rezepte: {len(filtered)}")
 
-# -------------------------------
 # Display recipes
-# -------------------------------
 if not recipes:
     st.info("Willkommen beim Chef's Recipe Hub! Fügen Sie Ihr erstes Rezept hinzu, um zu beginnen.")
 elif not filtered and not selected_id:
-    st.info("Keine Rezepte gefunden. Passen Sie Ihre Filterkriterien an oder fügen Sie ein neues Rezept hinzu.")
+    st.info("Keine Rezepte gefunden. Passen Sie Ihre Filterkriterien an.")
 else:
     for recipe in filtered:
         if selected_id and recipe["id"] != selected_id:
             continue
             
-        # Create a recipe card
         with st.container():
             st.markdown('<div class="recipe-card">', unsafe_allow_html=True)
             
             col1, col2 = st.columns([3, 1])
             
             with col1:
-                # Recipe header with emoji
                 st.markdown(f"### {recipe.get('image', '🍽️')} {recipe['title']}")
-                
-                # Description
                 st.write(recipe["description"])
                 
-                # Recipe metadata
                 col1a, col2a, col3a = st.columns(3)
                 with col1a:
                     st.markdown(f'<div class="time-badge">⏱️ {recipe.get("time", "")}</div>', unsafe_allow_html=True)
@@ -427,14 +367,12 @@ else:
                         st.markdown(f'<div class="calories-badge">🔥 {recipe.get("calories", "")} kcal</div>', unsafe_allow_html=True)
             
             with col2:
-                # Favorite status
                 favorite_status = "💔 Entfernen" if recipe.get("favorite", False) else "⭐ Favorit"
                 if st.button(favorite_status, key=f"fav_{recipe['id']}", use_container_width=True):
                     recipe["favorite"] = not recipe.get("favorite", False)
                     save_recipes(recipes)
                     st.rerun()
             
-            # Ingredients and steps in tabs
             tab1, tab2 = st.tabs(["🧂 Zutatenliste", "👨‍🍳 Zubereitungsschritte"])
             
             with tab1:
@@ -447,13 +385,12 @@ else:
                 for idx, step in enumerate(recipe["steps"], 1):
                     st.markdown(f"**{idx}.** {step}")
             
-            # Action buttons
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 if st.button("🗑️ Löschen", key=f"del_{recipe['id']}", use_container_width=True):
                     recipes = [r for r in recipes if r["id"] != recipe["id"]]
-                    save_recipes(recipes)
-                    st.rerun()
+                    if save_recipes(recipes):
+                        st.rerun()
             
             with col2:
                 if st.button("✏️ Bearbeiten", key=f"edit_{recipe['id']}", use_container_width=True):
@@ -463,14 +400,15 @@ else:
             with col3:
                 if st.button("📄 PDF", key=f"pdf_{recipe['id']}", use_container_width=True):
                     pdf = export_recipe_pdf(recipe)
-                    st.download_button(
-                        label="Herunterladen",
-                        data=pdf,
-                        file_name=f"{recipe['title']}.pdf",
-                        mime="application/pdf",
-                        key=f"dl_{recipe['id']}",
-                        use_container_width=True
-                    )
+                    if pdf:
+                        st.download_button(
+                            label="Herunterladen",
+                            data=pdf,
+                            file_name=f"{recipe['title']}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{recipe['id']}",
+                            use_container_width=True
+                        )
             
             st.markdown('</div>', unsafe_allow_html=True)
 
