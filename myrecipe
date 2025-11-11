@@ -1,0 +1,483 @@
+[
+  {
+    "id": "1",
+    "title": "Schnelles Kokos-Curry",
+    "description": "Aromatisches Curry in 20 Minuten",
+    "ingredients": [
+      "1 Dose Kokosmilch",
+      "2 EL Currypaste",
+      "1 Zwiebel",
+      "200g Gemüse nach Wahl",
+      "1 TL Kurkuma",
+      "Salz und Pfeffer"
+    ],
+    "steps": [
+      "Zwiebel anbraten",
+      "Currypaste mitrösten",
+      "Gemüse hinzufügen und mit Kokosmilch ablöschen",
+      "10 Minuten köcheln lassen",
+      "Mit Gewürzen abschmecken"
+    ],
+    "time": "20 min",
+    "category": "vegan",
+    "calories": "320",
+    "favorite": "False",
+    "image": "🍛"
+  },
+  {
+    "id": "2",
+    "title": "One-Pot Pasta",
+    "description": "Alles in einem Topf – super schnell",
+    "ingredients": [
+      "200g Pasta",
+      "400ml Tomatensauce",
+      "1 Bund Basilikum",
+      "2 Knoblauchzehen",
+      "1 EL Olivenöl"
+    ],
+    "steps": [
+      "Alles in einen Topf geben",
+      "15 Minuten kochen",
+      "Abschmecken und servieren",
+      "Mit Basilikum garnieren"
+    ],
+    "time": "25 min",
+    "category": "vegetarisch",
+    "calories": "450",
+    "favorite": "False",
+    "image": "🍝"
+  },
+  {
+    "id": "3",
+    "title": "Avocado-Toast",
+    "description": "Gesundes Frühstück in 5 Minuten",
+    "ingredients": [
+      "2 Scheiben Vollkornbrot",
+      "1 reife Avocado",
+      "Salz, Pfeffer, Zitronensaft",
+      "Chiliflocken nach Belieben"
+    ],
+    "steps": [
+      "Brot toasten",
+      "Avocado zerdrücken und würzen",
+      "Auf das Brot streichen",
+      "Mit Chiliflocken bestreuen"
+    ],
+    "time": "5 min",
+    "category": "vegan",
+    "calories": "280",
+    "favorite": "False",
+    "image": "🥑"
+  },
+  {
+    "id": "4",
+    "title": "Gemüse-Quiche ohne Teig",
+    "description": "Leichte Quiche mit viel Gemüse",
+    "ingredients": [
+      "3 Eier",
+      "200ml Milch",
+      "Gemüse nach Wahl",
+      "50g Käse",
+      "Salz, Pfeffer, Muskat"
+    ],
+    "steps": [
+      "Eier mit Milch verquirlen",
+      "Gemüse schneiden und in Form geben",
+      "Eiermischung darüber gießen",
+      "30 Minuten backen"
+    ],
+    "time": "35 min",
+    "category": "vegetarisch",
+    "calories": "380",
+    "favorite": "False",
+    "image": "🥧"
+  },
+  {
+    "id": "5",
+    "title": "Linsensuppe",
+    "description": "Herzhaft und sättigend",
+    "ingredients": [
+      "200g rote Linsen",
+      "1 Zwiebel",
+      "2 Karotten",
+      "1l Gemüsebrühe",
+      "1 TL Kreuzkümmel"
+    ],
+    "steps": [
+      "Zwiebel und Karotten anbraten",
+      "Linsen hinzufügen",
+      "Mit Brühe aufgießen und 20 Minuten köcheln lassen"
+    ],
+    "time": "25 min",
+    "category": "vegan",
+    "calories": "290",
+    "favorite": "False",
+    "image": "🍲"
+  },
+  {
+    "id": "6",
+    "title": "Hähnchenpfanne mit Paprika",
+    "description": "Schnell, einfach und proteinreich",
+    "ingredients": [
+      "200g Hähnchenbrust",
+      "1 Paprika",
+      "1 Zwiebel",
+      "2 EL Olivenöl",
+      "Sojasauce"
+    ],
+    "steps": [
+      "Hähnchen anbraten",
+      "Gemüse hinzufügen und kurz mitbraten",
+      "Mit Gewürzen abschmecken"
+    ],
+    "time": "20 min",
+    "category": "mit Fleisch",
+    "calories": "380",
+    "favorite": "False",
+    "image": "🍗"
+  },
+  {
+    "id": "7",
+    "title": "Tomaten-Mozzarella-Salat",
+    "description": "Frisch und leicht",
+    "ingredients": [
+      "2 Tomaten",
+      "1 Kugel Mozzarella",
+      "Basilikum",
+      "Olivenöl, Salz, Pfeffer",
+      "Balsamico"
+    ],
+    "steps": [
+      "Tomaten und Mozzarella schneiden",
+      "Mit Basilikum anrichten",
+      "Mit Öl und Gewürzen beträufeln"
+    ],
+    "time": "10 min",
+    "category": "vegetarisch",
+    "calories": "220",
+    "favorite": "False",
+    "image": "🧀"
+  },
+  {
+    "id": "8",
+    "title": "Wraps mit Hummus & Gemüse",
+    "description": "Schnell, vegan und lecker",
+    "ingredients": [
+      "Tortilla-Wraps",
+      "Hummus",
+      "Salat",
+      "Paprika, Gurke, Karotte",
+      "Sprossen"
+    ],
+    "steps": [
+      "Wrap mit Hummus bestreichen",
+      "Gemüse darauflegen",
+      "Einrollen und genießen"
+    ],
+    "time": "10 min",
+    "category": "vegan",
+    "calories": "320",
+    "favorite": "False",
+    "image": "🌯"
+  },
+  {
+    "id": "9",
+    "title": "Mediterraner Lachs",
+    "description": "Zarter Lachs mit mediterranen Kräutern",
+    "ingredients": [
+      "2 Lachsfilets",
+      "2 EL Olivenöl",
+      "Zitrone",
+      "Frische Kräuter",
+      "Knoblauch"
+    ],
+    "steps": [
+      "Lachs mit Öl und Kräutern marinieren",
+      "In Pfanne von beiden Seiten braten",
+      "Mit Zitrone beträufeln"
+    ],
+    "time": "15 min",
+    "category": "mit Fleisch",
+    "calories": "420",
+    "favorite": "False",
+    "image": "🐟"
+  },
+  {
+    "id": "10",
+    "title": "Quinoa-Buddha-Bowl",
+    "description": "Nährstoffreiche Bowl mit Quinoa und Gemüse",
+    "ingredients": [
+      "100g Quinoa",
+      "1 Avocado",
+      "Karotten",
+      "Gurke",
+      "Kichererbsen",
+      "Tahini-Dressing"
+    ],
+    "steps": [
+      "Quinoa kochen",
+      "Gemüse schneiden",
+      "Alles in Schüssel anrichten",
+      "Mit Dressing servieren"
+    ],
+    "time": "20 min",
+    "category": "vegan",
+    "calories": "380",
+    "favorite": "False",
+    "image": "🥗"
+  },
+  {
+    "id": "11",
+    "title": "Rindergeschnetzeltes",
+    "description": "Zartes Rindfleisch in Rahmsauce",
+    "ingredients": [
+      "300g Rindergeschnetzeltes",
+      "200g Sahne",
+      "Zwiebeln",
+      "Pilze",
+      "Weißwein"
+    ],
+    "steps": [
+      "Fleisch anbraten",
+      "Zwiebeln und Pilze dazugeben",
+      "Mit Wein ablöschen",
+      "Sahne hinzufügen und köcheln"
+    ],
+    "time": "25 min",
+    "category": "mit Fleisch",
+    "calories": "480",
+    "favorite": "False",
+    "image": "🥩"
+  },
+  {
+    "id": "12",
+    "title": "Vegane Buddha-Bowl",
+    "description": "Bunte Bowl mit Süßkartoffel und Avocado",
+    "ingredients": [
+      "1 Süßkartoffel",
+      "1 Avocado",
+      "Quinoa",
+      "Spinat",
+      "Kürbiskerne",
+      "Tahini"
+    ],
+    "steps": [
+      "Süßkartoffel würfeln und backen",
+      "Quinoa kochen",
+      "Alles in Bowl anrichten",
+      "Mit Tahini beträufeln"
+    ],
+    "time": "30 min",
+    "category": "vegan",
+    "calories": "420",
+    "favorite": "False",
+    "image": "🥑"
+  },
+  {
+    "id": "13",
+    "title": "Käsespätzle",
+    "description": "Schwäbische Spezialität mit Käse und Röstzwiebeln",
+    "ingredients": [
+      "500g Spätzle",
+      "200g Bergkäse",
+      "2 Zwiebeln",
+      "Butter",
+      "Petersilie"
+    ],
+    "steps": [
+      "Spätzle kochen",
+      "Zwiebeln in Ringe schneiden und braten",
+      "Spätzle mit Käse schichten",
+      "Im Ofen überbacken"
+    ],
+    "time": "40 min",
+    "category": "vegetarisch",
+    "calories": "520",
+    "favorite": "False",
+    "image": "🍝"
+  },
+  {
+    "id": "14",
+    "title": "Thunfisch-Salat",
+    "description": "Leichter Salat mit Thunfisch und Bohnen",
+    "ingredients": [
+      "1 Dose Thunfisch",
+      "Kidneybohnen",
+      "Mais",
+      "Zwiebel",
+      "Joghurt-Dressing"
+    ],
+    "steps": [
+      "Bohnen und Mais abtropfen lassen",
+      "Thunfisch hinzufügen",
+      "Mit Dressing vermischen",
+      "Kühl stellen"
+    ],
+    "time": "10 min",
+    "category": "mit Fleisch",
+    "calories": "280",
+    "favorite": "False",
+    "image": "🐟"
+  },
+  {
+    "id": "15",
+    "title": "Rote Linsen-Dal",
+    "description": "Würziges indisches Linsengericht",
+    "ingredients": [
+      "200g rote Linsen",
+      "1 Zwiebel",
+      "Knoblauch",
+      "Kokosmilch",
+      "Curry-Gewürze"
+    ],
+    "steps": [
+      "Zwiebel und Knoblauch anbraten",
+      "Linsen und Gewürze hinzufügen",
+      "Mit Kokosmilch aufgießen",
+      "20 Minuten köcheln"
+    ],
+    "time": "25 min",
+    "category": "vegan",
+    "calories": "350",
+    "favorite": "False",
+    "image": "🍛"
+  },
+  {
+    "id": "16",
+    "title": "Hähnchen-Curry",
+    "description": "Cremiges Hähnchencurry mit Reis",
+    "ingredients": [
+      "300g Hähnchen",
+      "1 Dose Kokosmilch",
+      "Currypaste",
+      "Gemüse",
+      "Reis"
+    ],
+    "steps": [
+      "Hähnchen anbraten",
+      "Currypaste zugeben",
+      "Mit Kokosmilch ablöschen",
+      "Gemüse hinzufügen und garen"
+    ],
+    "time": "30 min",
+    "category": "mit Fleisch",
+    "calories": "450",
+    "favorite": "False",
+    "image": "🍗"
+  },
+  {
+    "id": "17",
+    "title": "Caprese-Salat",
+    "description": "Italienischer Klassiker mit Mozzarella und Tomaten",
+    "ingredients": [
+      "Buffalo-Mozzarella",
+      "Kirschtomaten",
+      "Basilikum",
+      "Olivenöl",
+      "Balsamico"
+    ],
+    "steps": [
+      "Mozzarella und Tomaten scheiden",
+      "Mit Basilikum anrichten",
+      "Mit Öl und Balsamico beträufeln"
+    ],
+    "time": "10 min",
+    "category": "vegetarisch",
+    "calories": "320",
+    "favorite": "False",
+    "image": "🧀"
+  },
+  {
+    "id": "18",
+    "title": "Vegetarische Lasagne",
+    "description": "Schichtweise Genuss mit Gemüse und Käse",
+    "ingredients": [
+      "Lasagneblätter",
+      "Tomatensauce",
+      "Ricotta",
+      "Spinat",
+      "Zucchini",
+      "Käse"
+    ],
+    "steps": [
+      "Gemüse vorbereiten",
+      "Schichten: Sauce, Blätter, Gemüse, Käse",
+      "45 Minuten backen"
+    ],
+    "time": "60 min",
+    "category": "vegetarisch",
+    "calories": "380",
+    "favorite": "False",
+    "image": "🍝"
+  },
+  {
+    "id": "19",
+    "title": "Griechischer Bauernsalat",
+    "description": "Frischer Salat nach griechischer Art",
+    "ingredients": [
+      "Gurke",
+      "Tomaten",
+      "Feta",
+      "Oliven",
+      "Zwiebeln",
+      "Olivenöl"
+    ],
+    "steps": [
+      "Gemüse würfeln",
+      "Feta darüber bröckeln",
+      "Oliven hinzufügen",
+      "Mit Öl beträufeln"
+    ],
+    "time": "15 min",
+    "category": "vegetarisch",
+    "calories": "280",
+    "favorite": "False",
+    "image": "🥗"
+  },
+  {
+    "id": "20",
+    "title": "Chili con Carne",
+    "description": "Würziger Eintopf mit Hackfleisch und Bohnen",
+    "ingredients": [
+      "300g Hackfleisch",
+      "Kidneybohnen",
+      "Mais",
+      "Tomatensauce",
+      "Chilipulver"
+    ],
+    "steps": [
+      "Hackfleisch anbraten",
+      "Bohnen und Mais hinzufügen",
+      "Mit Tomatensauce aufgießen",
+      "30 Minuten köcheln"
+    ],
+    "time": "40 min",
+    "category": "mit Fleisch",
+    "calories": "420",
+    "favorite": "False",
+    "image": "🌶️"
+  },
+  {
+    "id": "21",
+    "title": "Ratatouille",
+    "description": "Französisches Gemüsegericht aus dem Ofen",
+    "ingredients": [
+      "Zucchini",
+      "Aubergine",
+      "Paprika",
+      "Tomaten",
+      "Kräuter der Provence"
+    ],
+    "steps": [
+      "Gemüse schneiden",
+      "Schichtweise in Form geben",
+      "Mit Kräutern bestreuen",
+      "40 Minuten backen"
+    ],
+    "time": "50 min",
+    "category": "vegan",
+    "calories": "180",
+    "favorite": "False",
+    "image": "🍆"
+  }
+]
