@@ -1,5 +1,9 @@
+# app.py
 import streamlit as st
-import json, os, random, bcrypt
+import json
+import os
+import random
+import bcrypt
 from datetime import datetime
 from io import BytesIO
 from reportlab.lib.pagesizes import A4
@@ -12,14 +16,19 @@ from reportlab.lib.colors import HexColor
 DATA_FILE = os.path.join(os.getcwd(), "recipes.json")
 USERS_FILE = os.path.join(os.getcwd(), "users.json")
 
-# Fallback: Leere Dateien erstellen, falls nicht vorhanden (z. B. bei Streamlit Cloud)
-for file in [DATA_FILE, USERS_FILE]:
+# Falls Dateien nicht existieren (z. B. Streamlit Cloud), lege leere JSONs an
+for file in (DATA_FILE, USERS_FILE):
     if not os.path.exists(file):
-        with open(file, "w", encoding="utf-8") as f:
-            json.dump([], f)
+        try:
+            with open(file, "w", encoding="utf-8") as f:
+                json.dump([], f)
+        except Exception as e:
+            # Falls Schreibrechte eingeschränkt sind, zeigen wir einen Hinweis,
+            # aber lassen die App weiterlaufen (Streamlit Cloud: temporärer FS)
+            st.warning(f"Konnte Datei {file} nicht anlegen: {e}")
 
 # -------------------------------
-# Authentifizierungsfunktionen
+# Authentifizierungs-Funktionen
 # -------------------------------
 def lade_benutzer():
     try:
@@ -44,46 +53,75 @@ def hash_passwort(passwort: str) -> str:
     return bcrypt.hashpw(passwort.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def pruefe_passwort(passwort: str, hashed: str) -> bool:
-    return bcrypt.checkpw(passwort.encode("utf-8"), hashed.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(passwort.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
-def authentifiziere_benutzer(benutzername, passwort):
+def registriere_benutzer(username, passwort, email=""):
     benutzer = lade_benutzer()
-    for eintrag in benutzer:
-        if eintrag["username"] == benutzername and pruefe_passwort(passwort, eintrag["password"]):
-            return eintrag
-    return None
-
-def registriere_benutzer(benutzername, passwort, email=""):
-    benutzer = lade_benutzer()
-    for eintrag in benutzer:
-        if eintrag["username"] == benutzername:
-            return False, "Benutzername existiert bereits."
-
-    hashed_pw = hash_passwort(passwort)
-    neuer_benutzer = {
-        "username": benutzername,
-        "password": hashed_pw,
+    for b in benutzer:
+        if b.get("username") == username:
+            return False, "Benutzername existiert bereits"
+    neuer = {
+        "username": username,
+        "password": hash_passwort(passwort),
         "email": email,
         "joined_date": datetime.now().strftime("%Y-%m-%d")
     }
-    benutzer.append(neuer_benutzer)
+    benutzer.append(neuer)
     if speichere_benutzer(benutzer):
-        return True, "Registrierung erfolgreich!"
-    return False, "Fehler bei der Registrierung."
+        return True, "Registrierung erfolgreich"
+    return False, "Fehler beim Speichern des Benutzers"
+
+def authentifiziere_benutzer(username, passwort):
+    benutzer = lade_benutzer()
+    for b in benutzer:
+        if b.get("username") == username and pruefe_passwort(passwort, b.get("password","")):
+            return b
+    return None
 
 # -------------------------------
-# Rezept-Funktionen
+# Migration: Falls alte Klartext-Passwörter vorhanden sind
+# -------------------------------
+def migriere_klartext_passwoerter_once():
+    benutzer = lade_benutzer()
+    aktualisiert = False
+    for b in benutzer:
+        pw = b.get("password", "")
+        # bcrypt Hash beginnt typischerweise mit $2 (z.B. $2b$)
+        if pw and not pw.startswith("$2"):
+            try:
+                b["password"] = hash_passwort(pw)
+                aktualisiert = True
+            except Exception:
+                # wenn etwas schiefgeht, überspringen wir
+                pass
+    if aktualisiert:
+        speichere_benutzer(benutzer)
+        # Hinweis, aber nicht abbrechen — Migration einmalig
+        st.info("Alte Klartext-Passwörter wurden einmalig gehasht.")
+
+# Führt Migration still im Start durch (idempotent)
+try:
+    migriere_klartext_passwoerter_once()
+except Exception:
+    pass
+
+# -------------------------------
+# Utility / Rezept-Funktionen
 # -------------------------------
 def lade_rezepte():
     try:
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, "r", encoding="utf-8") as f:
-                rezepte = json.load(f)
-                for r in rezepte:
+                recipes = json.load(f)
+                # sicherstellen, dass Felder existieren
+                for r in recipes:
                     r.setdefault("category", "vegetarisch")
                     r.setdefault("calories", "")
                     r.setdefault("image", "🍽️")
-                return rezepte
+                return recipes
         return []
     except Exception as e:
         st.error(f"Fehler beim Laden der Rezepte: {e}")
@@ -101,213 +139,506 @@ def speichere_rezepte(rezepte):
 def neue_id():
     return datetime.now().strftime("%Y%m%d%H%M%S%f")
 
-def kategorie_farbe(kategorie):
-    farben = {"vegan": "#4CAF50", "vegetarisch": "#8BC34A", "mit Fleisch": "#F44336"}
-    return farben.get(kategorie, "#757575")
+def kategorie_farbe(category):
+    colors = {
+        "vegan": "#4CAF50",
+        "vegetarisch": "#8BC34A",
+        "mit Fleisch": "#F44336"
+    }
+    return colors.get(category, "#757575")
 
-def exportiere_rezept_pdf(rezept):
+def export_recipe_pdf(recipe):
     try:
         buffer = BytesIO()
         c = canvas.Canvas(buffer, pagesize=A4)
-        w, h = A4
+        width, height = A4
 
-        prim = HexColor("#D32F2F")
-        sec = HexColor("#5D4037")
-        text = HexColor("#212121")
+        primary_color = HexColor("#D32F2F")
+        secondary_color = HexColor("#5D4037")
+        text_color = HexColor("#212121")
 
-        y = h - 50
-        c.setFillColor(prim)
+        y = height - 50
+        c.setFillColor(primary_color)
         c.setFont("Helvetica-Bold", 22)
-        c.drawString(50, y, rezept["title"])
+        c.drawString(50, y, recipe["title"])
         y -= 30
 
-        c.setFillColor(text)
+        c.setFillColor(text_color)
         c.setFont("Helvetica", 12)
-        c.drawString(50, y, f"Beschreibung: {rezept['description']}")
+        c.drawString(50, y, f"Beschreibung: {recipe.get('description','')}")
         y -= 20
 
-        c.drawString(50, y, f"Zubereitungszeit: {rezept.get('time','')}")
-        c.drawString(200, y, f"Kategorie: {rezept.get('category','')}")
-        c.drawString(350, y, f"Kalorien: {rezept.get('calories','')} kcal")
+        c.drawString(50, y, f"Zubereitungszeit: {recipe.get('time','')}")
+        c.drawString(250, y, f"Kategorie: {recipe.get('category','')}")
+        c.drawString(430, y, f"Kalorien: {recipe.get('calories','')}")
         y -= 30
 
-        c.setFillColor(sec)
+        c.setFillColor(secondary_color)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(50, y, "Zutaten:")
         y -= 25
 
-        c.setFillColor(text)
+        c.setFillColor(text_color)
         c.setFont("Helvetica", 12)
-        for zutat in rezept["ingredients"]:
-            c.drawString(60, y, f"• {zutat}")
+        for ing in recipe.get("ingredients", []):
+            c.drawString(60, y, f"• {ing}")
             y -= 18
             if y < 100:
                 c.showPage()
-                y = h - 50
-                c.setFillColor(text)
+                y = height - 50
+                c.setFillColor(text_color)
 
         y -= 10
-        c.setFillColor(sec)
+        c.setFillColor(secondary_color)
         c.setFont("Helvetica-Bold", 16)
         c.drawString(50, y, "Zubereitung:")
         y -= 25
 
-        c.setFillColor(text)
+        c.setFillColor(text_color)
         c.setFont("Helvetica", 12)
-        for i, schritt in enumerate(rezept["steps"], 1):
-            c.drawString(60, y, f"{i}. {schritt}")
+        for idx, step in enumerate(recipe.get("steps", []), 1):
+            # einfache Zeilenumbruch-Handling: falls zu lang, splitten wir
+            # (einfacher Ansatz)
+            text = f"{idx}. {step}"
+            c.drawString(60, y, text)
             y -= 18
             if y < 50:
                 c.showPage()
-                y = h - 50
-                c.setFillColor(text)
+                y = height - 50
+                c.setFillColor(text_color)
 
         c.showPage()
         c.save()
         buffer.seek(0)
         return buffer
     except Exception as e:
-        st.error(f"Fehler beim PDF-Export: {e}")
+        st.error(f"Error generating PDF: {e}")
         return None
 
 # -------------------------------
-# Streamlit-Layout
+# Streamlit Setup & CSS
 # -------------------------------
-st.set_page_config(page_title="G8 Rezept-Hub", page_icon="👨‍🍳", layout="wide")
+st.set_page_config(
+    page_title="G8 Recipe Hub",
+    page_icon="👨‍🍳",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 st.markdown("""
 <style>
-.main-header {
-    font-size: 3rem;
-    color: #D32F2F;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-.recipe-card {
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin-bottom: 1.5rem;
-    border-left: 5px solid #D32F2F;
-    background-color: #FFF9F9;
-}
+    .main-header {
+        font-size: 3rem;
+        color: #D32F2F;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    .recipe-card {
+        padding: 1.5rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        border-left: 5px solid #D32F2F;
+        background-color: #FFF9F9;
+    }
+    .category-tag {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    .time-badge {
+        background-color: #FFEBEE;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        display: inline-block;
+        margin-right: 0.5rem;
+    }
+    .calories-badge {
+        background-color: #E8F5E9;
+        padding: 0.25rem 0.5rem;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        display: inline-block;
+    }
+    .auth-container {
+        max-width: 400px;
+        margin: 2rem auto;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
-# Login / Registrierung
-# -------------------------------
+# Session state initialisieren
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "current_user" not in st.session_state:
     st.session_state.current_user = None
+if "show_login" not in st.session_state:
+    st.session_state.show_login = True
 
+# -------------------------------
+# Authentifizierung UI
+# -------------------------------
 if not st.session_state.authenticated:
-    st.markdown('<h1 class="main-header">👨‍🍳 Group8 Rezept-Hub</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">👨‍🍳 Group8 Recipe Hub</h1>', unsafe_allow_html=True)
     st.markdown("**Professionelle Rezepte für Ihre Küche**")
 
-    tab1, tab2 = st.tabs(["🔐 Anmelden", "📝 Registrieren"])
+    tab1, tab2 = st.tabs(["🔐 Login", "📝 Register"])
 
     with tab1:
-        st.subheader("Anmeldung")
-        with st.form("login_form"):
-            benutzername = st.text_input("Benutzername")
-            passwort = st.text_input("Passwort", type="password")
-            login = st.form_submit_button("Login")
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        st.subheader("Login to Your Account")
 
-            if login:
-                if benutzername and passwort:
-                    user = authentifiziere_benutzer(benutzername, passwort)
+        with st.form("login_form"):
+            username = st.text_input("Username", placeholder="Enter your username")
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            login_btn = st.form_submit_button("Login")
+
+            if login_btn:
+                if username and password:
+                    user = authentifiziere_benutzer(username, password)
                     if user:
                         st.session_state.authenticated = True
                         st.session_state.current_user = user
-                        st.success(f"Willkommen zurück, {user['username']}!")
+                        st.session_state.show_login = False
+                        st.success(f"Welcome back, {user['username']}!")
                         st.rerun()
                     else:
-                        st.error("Falscher Benutzername oder Passwort.")
+                        st.error("Invalid username or password")
                 else:
-                    st.error("Bitte alle Felder ausfüllen.")
+                    st.error("Please fill in all fields")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with tab2:
-        st.subheader("Neuen Account erstellen")
-        with st.form("register_form"):
-            neu_name = st.text_input("Benutzername")
-            neu_pw = st.text_input("Passwort", type="password")
-            neu_pw2 = st.text_input("Passwort bestätigen", type="password")
-            email = st.text_input("E-Mail (optional)")
-            submit = st.form_submit_button("Registrieren")
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        st.subheader("Create New Account")
 
-            if submit:
-                if neu_name and neu_pw and neu_pw2:
-                    if neu_pw == neu_pw2:
-                        ok, msg = registriere_benutzer(neu_name, neu_pw, email)
-                        if ok:
-                            st.success(msg)
+        with st.form("register_form"):
+            new_username = st.text_input("Username", placeholder="Choose a username")
+            new_password = st.text_input("Password", type="password", placeholder="Choose a password")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm your password")
+            email = st.text_input("Email (optional)", placeholder="Your email address")
+            register_btn = st.form_submit_button("Register")
+
+            if register_btn:
+                if new_username and new_password and confirm_password:
+                    if new_password == confirm_password:
+                        success, message = registriere_benutzer(new_username, new_password, email)
+                        if success:
+                            st.success(message)
+                            # Auto-login after registration
                             st.session_state.authenticated = True
-                            st.session_state.current_user = {"username": neu_name, "email": email}
+                            st.session_state.current_user = {
+                                "username": new_username,
+                                "email": email,
+                                "joined_date": datetime.now().strftime("%Y-%m-%d")
+                            }
+                            st.session_state.show_login = False
                             st.rerun()
                         else:
-                            st.error(msg)
+                            st.error(message)
                     else:
-                        st.error("Passwörter stimmen nicht überein.")
+                        st.error("Passwords do not match")
                 else:
-                    st.error("Bitte alle Pflichtfelder ausfüllen.")
+                    st.error("Please fill in all required fields")
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.stop()
 
 # -------------------------------
-# Hauptbereich (nach Login)
+# MAIN APPLICATION (nach Login)
 # -------------------------------
-st.markdown('<h1 class="main-header">👨‍🍳 Group8 Rezept-Hub</h1>', unsafe_allow_html=True)
-rezepte = lade_rezepte()
+st.markdown('<h1 class="main-header">👨‍🍳 Group8 Recipe Hub</h1>', unsafe_allow_html=True)
+st.markdown("**Professionelle Rezepte für Ihre Küche**")
 
+# Rezepte laden
+recipes = lade_rezepte()
+
+# -------------------------------
+# Sidebar (Filter + Neues Rezept)
+# -------------------------------
 with st.sidebar:
-    st.success(f"👋 Willkommen, **{st.session_state.current_user['username']}**!")
+    # Benutzerinfo & Logout
+    st.success(f"👋 Welcome, **{st.session_state.current_user['username']}**!")
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.authenticated = False
         st.session_state.current_user = None
+        st.session_state.show_login = True
         st.rerun()
 
     st.markdown("---")
-    st.markdown("### 🔍 Filter")
-    suchtext = st.text_input("Rezeptsuche")
-    kategorien = list(sorted(set(r.get("category", "vegetarisch") for r in rezepte)))
-    gewaehlte_kategorien = st.multiselect("Kategorien", kategorien, default=kategorien)
+    st.markdown("### 🔍 Rezept-Filter")
 
-# -------------------------------
-# Rezepte anzeigen
-# -------------------------------
-gefiltert = []
-for r in rezepte:
-    if gewaehlte_kategorien and r.get("category") not in gewaehlte_kategorien:
-        continue
-    if not suchtext or suchtext.lower() in r["title"].lower() or suchtext.lower() in r["description"].lower():
-        gefiltert.append(r)
+    search = st.text_input("Rezepte durchsuchen", placeholder="Name, Zutaten oder Kategorie...")
 
-st.markdown(f"### 📋 Gefundene Rezepte: {len(gefiltert)}")
+    categories = list(set([r.get("category", "vegetarisch") for r in recipes])) if recipes else []
+    categories.sort()
 
-if not gefiltert:
-    st.info("Keine Rezepte gefunden. Fügen Sie ein neues hinzu!")
-else:
-    for rezept in gefiltert:
-        st.markdown('<div class="recipe-card">', unsafe_allow_html=True)
-        st.markdown(f"### {rezept['image']} {rezept['title']}")
-        st.write(rezept["description"])
-        st.caption(f"Kategorie: {rezept['category']} | Zeit: {rezept['time']} | Kalorien: {rezept.get('calories','')}")
+    if categories:
+        selected_categories = st.multiselect(
+            "Kategorien auswählen",
+            options=categories,
+            default=categories
+        )
+    else:
+        selected_categories = []
+        st.info("Noch keine Kategorien verfügbar")
 
-        with st.expander("🧂 Zutaten & Zubereitung"):
+    time_filter = st.selectbox(
+        "Maximale Zubereitungszeit",
+        options=["Beliebig", "≤ 15 min", "≤ 30 min", "≤ 45 min", "≤ 60 min"]
+    )
+
+    calories_filter = st.selectbox(
+        "Maximale Kalorien",
+        options=["Beliebig", "≤ 200 kcal", "≤ 300 kcal", "≤ 400 kcal", "≤ 500 kcal"]
+    )
+
+    only_favorites = st.checkbox("Nur Favoriten anzeigen")
+
+    st.markdown("---")
+    st.markdown("### 📊 Rezept-Statistiken")
+
+    if recipes:
+        total_recipes = len(recipes)
+        category_counts = {}
+        for r in recipes:
+            cat = r.get("category", "vegetarisch")
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        favorite_count = len([r for r in recipes if r.get("favorite")])
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Gesamte Rezepte", total_recipes)
+            for cat, count in list(category_counts.items())[:2]:
+                st.metric(cat.capitalize(), count)
+        with col2:
+            for cat, count in list(category_counts.items())[2:]:
+                st.metric(cat.capitalize(), count)
+            if favorite_count > 0:
+                st.metric("Favoriten", favorite_count)
+    else:
+        st.info("Noch keine Rezepte vorhanden")
+
+    st.markdown("---")
+    st.markdown("### 👨‍🍳 Neues Rezept")
+
+    with st.expander("Rezept hinzufügen"):
+        with st.form("add_recipe_form", clear_on_submit=True):
+            title = st.text_input("Titel*")
+            description = st.text_area("Kurzbeschreibung*")
+
+            col1, col2 = st.columns(2)
+            with col1:
+                time = st.text_input("Zubereitungszeit*", placeholder="z.B. 20 min")
+            with col2:
+                category = st.selectbox("Kategorie*", ["vegan", "vegetarisch", "mit Fleisch"])
+
+            calories = st.text_input("Kalorien (pro Portion)", placeholder="z.B. 320")
+
             st.subheader("Zutaten")
-            for z in rezept["ingredients"]:
-                st.markdown(f"- {z}")
-            st.subheader("Zubereitung")
-            for i, s in enumerate(rezept["steps"], 1):
-                st.markdown(f"**{i}.** {s}")
+            ingredients = st.text_area("Eine Zutat pro Zeile*",
+                                      placeholder="300g Hähnchenbrust\n2 Paprika\n1 Zucchini\n2 EL Sojasauce")
 
-        if st.button("📄 Als PDF exportieren", key=f"pdf_{rezept['id']}"):
-            pdf = exportiere_rezept_pdf(rezept)
-            if pdf:
-                st.download_button("Herunterladen", data=pdf, file_name=f"{rezept['title']}.pdf", mime="application/pdf")
+            st.subheader("Zubereitungsschritte")
+            steps = st.text_area("Ein Schritt pro Zeile*",
+                                placeholder="Hähnchen anbraten\nGemüse hinzufügen\nMit Sojasauce ablöschen\n5 Minuten dünsten")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+            emoji_options = ["🍽️", "🍛", "🍝", "🥑", "🥧", "🍲", "🍗", "🧀", "🌯", "🥔", "🥬", "🍳", "🥗", "🍅", "🥞", "🌮", "🍡", "🍚", "🥣", "🐟", "🥩", "🌶️", "🍆"]
+            selected_emoji = st.selectbox("Rezept-Emoji", emoji_options, index=0)
+
+            submitted = st.form_submit_button("Rezept speichern")
+
+            if submitted:
+                if title.strip() and description.strip() and ingredients.strip() and steps.strip() and time.strip():
+                    new_recipe = {
+                        "id": neue_id(),
+                        "title": title.strip(),
+                        "description": description.strip(),
+                        "ingredients": [i.strip() for i in ingredients.split("\n") if i.strip()],
+                        "steps": [s.strip() for s in steps.split("\n") if s.strip()],
+                        "time": time.strip(),
+                        "category": category,
+                        "calories": calories.strip(),
+                        "favorite": False,
+                        "image": selected_emoji,
+                        "created_by": st.session_state.current_user["username"],
+                        "created_date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    }
+                    recipes.insert(0, new_recipe)
+                    if speichere_rezepte(recipes):
+                        st.success(f"Rezept **{title}** wurde hinzugefügt!")
+                        st.rerun()
+                    else:
+                        st.error("Fehler beim Speichern des Rezepts!")
+                else:
+                    st.error("Bitte füllen Sie alle mit * markierten Felder aus!")
+
+# -------------------------------
+# Hauptbereich Buttons (Random / Favorites / Vegan / All)
+# -------------------------------
+if recipes:
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        if st.button("🎲 Zufälliges Rezept", use_container_width=True):
+            r = random.choice(recipes)
+            st.session_state["show_random"] = r["id"]
+            st.rerun()
+
+    with col2:
+        if st.button("⭐ Alle Favoriten", use_container_width=True):
+            st.session_state["show_favorites"] = True
+            st.rerun()
+
+    with col3:
+        if st.button("🌱 Nur Vegan", use_container_width=True):
+            st.session_state["show_vegan"] = True
+            st.rerun()
+
+    with col4:
+        if st.button("📋 Alle Rezepte", use_container_width=True):
+            for key in ["show_random", "show_favorites", "show_vegan"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+
+# -------------------------------
+# Filter-Logik
+# -------------------------------
+filtered = []
+for r in recipes:
+    if st.session_state.get("show_favorites") and not r.get("favorite", False):
+        continue
+    if st.session_state.get("show_vegan") and r.get("category") != "vegan":
+        continue
+    if selected_categories and r.get("category", "vegetarisch") not in selected_categories:
+        continue
+
+    # Suche (Titel, Zutaten, Kategorie, Beschreibung)
+    search_lower = search.lower() if search else ""
+    if (not search_lower or
+        search_lower in r["title"].lower() or
+        any(search_lower in i.lower() for i in r["ingredients"]) or
+        search_lower in r.get("category","").lower() or
+        search_lower in r.get("description","").lower()):
+        # Time & calories filter (vereinfachte Logik: nur wenn user Filter gesetzt hat)
+        # Zeit-Filter (z.B. "≤ 30 min")
+        if time_filter != "Beliebig":
+            try:
+                max_mins = int(time_filter.split("≤")[1].split()[0])
+                # Versuche, aus r["time"] Zahl der Minuten zu extrahieren
+                t = r.get("time","")
+                num = ''.join(ch for ch in t if ch.isdigit())
+                if num:
+                    if int(num) > max_mins:
+                        continue
+            except Exception:
+                # bei Fehlern Zeit nicht filtern
+                pass
+
+        if calories_filter != "Beliebig" and r.get("calories"):
+            try:
+                max_kcal = int(calories_filter.split("≤")[1].split()[0])
+                kcal = ''.join(ch for ch in r.get("calories","") if ch.isdigit())
+                if kcal and int(kcal) > max_kcal:
+                    continue
+            except Exception:
+                pass
+
+        filtered.append(r)
+
+selected_id = st.session_state.get("show_random", None)
+st.markdown(f"### 📋 Gefundene Rezepte: {len(filtered)}")
+
+# -------------------------------
+# Anzeige der Rezepte
+# -------------------------------
+if not recipes:
+    st.info("Willkommen beim Chef's Recipe Hub! Fügen Sie Ihr erstes Rezept hinzu, um zu beginnen.")
+elif not filtered and not selected_id:
+    st.info("Keine Rezepte gefunden. Passen Sie Ihre Filterkriterien an.")
+else:
+    for recipe in filtered:
+        if selected_id and recipe["id"] != selected_id:
+            continue
+
+        with st.container():
+            st.markdown('<div class="recipe-card">', unsafe_allow_html=True)
+
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown(f"### {recipe.get('image','🍽️')} {recipe['title']}")
+                st.write(recipe.get("description",""))
+
+                col1a, col2a, col3a = st.columns(3)
+                with col1a:
+                    st.markdown(f'<div class="time-badge">⏱️ {recipe.get("time","")}</div>', unsafe_allow_html=True)
+                with col2a:
+                    category_color = kategorie_farbe(recipe.get("category","vegetarisch"))
+                    category_name = recipe.get("category","vegetarisch")
+                    st.markdown(f'<div class="category-tag" style="background-color: {category_color}; color: white;">{category_name}</div>', unsafe_allow_html=True)
+                with col3a:
+                    if recipe.get("calories"):
+                        st.markdown(f'<div class="calories-badge">🔥 {recipe.get("calories","")} kcal</div>', unsafe_allow_html=True)
+
+            with col2:
+                favorite_status = "💔 Entfernen" if recipe.get("favorite", False) else "⭐ Favorit"
+                if st.button(favorite_status, key=f"fav_{recipe['id']}", use_container_width=True):
+                    recipe["favorite"] = not recipe.get("favorite", False)
+                    speichere_rezepte(recipes)
+                    st.rerun()
+
+            # Ersteller info
+            if recipe.get("created_by"):
+                st.caption(f"Erstellt von {recipe['created_by']} am {recipe.get('created_date','')}")
+
+            tab1, tab2 = st.tabs(["🧂 Zutatenliste", "👨‍🍳 Zubereitungsschritte"])
+
+            with tab1:
+                st.markdown("#### Zutaten")
+                for ingredient in recipe.get("ingredients", []):
+                    st.markdown(f"- {ingredient}")
+
+            with tab2:
+                st.markdown("#### Zubereitung")
+                for idx, step in enumerate(recipe.get("steps", []), 1):
+                    st.markdown(f"**{idx}.** {step}")
+
+            col1b, col2b, col3b = st.columns([1,1,1])
+            with col1b:
+                if st.button("🗑️ Löschen", key=f"del_{recipe['id']}", use_container_width=True):
+                    recipes = [r for r in recipes if r["id"] != recipe["id"]]
+                    if speichere_rezepte(recipes):
+                        st.rerun()
+
+            with col2b:
+                if st.button("✏️ Bearbeiten", key=f"edit_{recipe['id']}", use_container_width=True):
+                    st.session_state["edit_recipe"] = recipe["id"]
+                    st.info("Bearbeitungsfunktion kommt bald! (Platzhalter)")
+
+            with col3b:
+                if st.button("📄 PDF", key=f"pdf_{recipe['id']}", use_container_width=True):
+                    pdf = export_recipe_pdf(recipe)
+                    if pdf:
+                        st.download_button(
+                            label="Herunterladen",
+                            data=pdf,
+                            file_name=f"{recipe['title']}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_{recipe['id']}",
+                            use_container_width=True
+                        )
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("---")
-st.markdown("© 2025 Group8 Rezept-Hub — Sichere & professionelle Rezeptverwaltung")
+st.markdown("© 2025 Chef's Recipe Hub — Professionelle Rezeptverwaltung für Feinschmecker")
